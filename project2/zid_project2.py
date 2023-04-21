@@ -83,6 +83,7 @@ def read_prc_csv(tic):
     """
     # <COMPLETE THIS PART>
 
+    # Determine correct file name and read file
     tic = tic.lower()
     file_name = "data/" + tic + "_prc.csv"
     df = pd.read_csv(file_name)
@@ -191,6 +192,7 @@ def mk_prc_df(tickers, prc_col='adj_close'):
     """
     # <COMPLETE THIS PART>
 
+    # Cycle through each ticker and store value into new dataframe
     df = pd.DataFrame()
     for tic in tickers:
         temp = read_prc_csv(tic)
@@ -271,26 +273,33 @@ def mk_ret_df(prc_df):
 
     """
     # <COMPLETE THIS PART>
-
+    # Read Market CSV and store into dataframe
     df = pd.read_csv(cfg.FF_CSV)
     df = cfg.standardise_colnames(df)
 
+    # Sort given dataframe by date index,
+    # store index in array
+    prc_df = prc_df.sort_index()
     date_list = list(prc_df.index.values)
+
+    # Determine index and value of first date
     first_date = date_list[0]
     time = pd.to_datetime(str(first_date))
     first_date = time.strftime('%Y-%m-%d')
+    first_index = df.index[df['date'] == first_date]
+    first_index = first_index[0]
 
+    # Determine index and value of last date
     last_date = date_list[-1]
     time = pd.to_datetime(str(last_date))
     last_date = time.strftime('%Y-%m-%d')
+    last_index = df.index[df['date'] == last_date]
+    last_index = last_index[0]
 
-    df = df.loc[first_date:last_date, 'mkt']
-    print("DATAFRAME")
-    print(df)
-    prc_df['mkt'] = df
-    for i in prc_df.index:
-        if prc_df['mkt'][i] == 'NaN':
-            prc_df.drop(index=i, inplace=True)
+    # Spilt market dataframe into given data range
+    mkt_series = df.loc[first_index:last_index, 'mkt']
+    mkt_list = mkt_series.tolist()
+    prc_df['mkt'] = mkt_list
 
     return prc_df
 
@@ -360,7 +369,22 @@ def mk_aret_df(ret_df):
 
     """
     # <COMPLETE THIS PART>
+    # Create new data frame with appropriate return df structure
+    new_df = ret_df.drop(['mkt'], axis=1)
 
+    # Store column names and dates (index)
+    col_names = list(ret_df.columns.values)
+    dates = list(ret_df.index.values)
+
+    # Iterate through rows and determine new value
+    # and replace at cell for new value
+    for index, row in ret_df.iterrows():
+        i = 0
+        while i < (len(col_names) - 1):
+            new_val = row[col_names[i]] - row[col_names[-1]]
+            new_df.at[dates[i], col_names[i]] = new_val
+            i += 1
+    return new_df
 
 
 # ----------------------------------------------------------------------------
@@ -413,6 +437,13 @@ def get_avg(df, col, year):
 
     """
     #<COMPLETE THIS PART>
+    # Filter data frame by year
+    df_year = df.loc[df.index.year == year]
+
+    # Compute the mean of the column for the given year
+    mean = df_year[col].mean()
+
+    return mean
 
 
 
@@ -458,6 +489,13 @@ def get_ew_rets(df, tickers):
 
     """
     #<COMPLETE THIS PART>
+    # Filter data frame to include only the tickers specified
+    df = df[tickers]
+
+    # Compute the mean of the selected columns, ignoring missing values
+    mean = df.mean(axis=1, skipna=True)
+
+    return mean
 
 
 
@@ -504,6 +542,17 @@ def get_ann_ret(ser, start, end):
 
     """
     # <COMPLETE THIS PART>
+    # Select data between start and end dates
+    data = ser.loc[start:end].dropna()
+
+    # Compute total return and number of days
+    tot_ret = (data + 1).prod() - 1
+    N = len(data)
+
+    # Compute annualised return
+    ann_ret = (tot_ret + 1) ** (252 / N) - 1
+
+    return ann_ret
 
 
 # ----------------------------------------------------------------------------
@@ -975,15 +1024,14 @@ def _test_get_ann_ret():
 
 if __name__ == "__main__":
     pass
-    #_test_cfg()
-    #_test_read_prc_csv()
-    #_test_mk_prc_df()
+    _test_cfg()
+    _test_read_prc_csv()
+    _test_mk_prc_df()
     _test_mk_ret_df()
-    #_test_mk_aret_df()
-    #_test_get_avg()
-    #_test_get_ew_rets()
-    #_test_get_ann_ret()
-
+    _test_mk_aret_df()
+    _test_get_avg()
+    _test_get_ew_rets()
+    _test_get_ann_ret()
 
 
 
